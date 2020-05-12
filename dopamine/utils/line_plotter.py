@@ -25,7 +25,12 @@ from __future__ import print_function
 
 from dopamine.utils import plotter
 import gin
+#FIX - AttributeError: 'FigureCanvasMac' object has no attribute 'renderer'
 import matplotlib
+from sys import platform
+if platform == 'darwin':
+    matplotlib.use('TkAgg')
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pygame
