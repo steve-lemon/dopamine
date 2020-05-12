@@ -1,0 +1,23 @@
+*.pyc
+*.bak
+*.bak_*
+*.tar
+__pycache__/
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+dist/
+build/
+*.egg-info/
+
+# C extensions
+*.so
+
+# vscode
+.vscode
+.idea
+
+# Dev
+.DS_Store
