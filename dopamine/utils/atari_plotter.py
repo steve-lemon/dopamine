@@ -32,8 +32,11 @@ class AtariPlotter(plotter.Plotter):
   _defaults = {
       'x': 0,
       'y': 0,
-      'width': 160,
-      'height': 210,
+    #   'width': 160,
+    #   'height': 210,
+      #TODO - optimize for retro.
+      'width': 240,
+      'height': 224,
   }
 
   def __init__(self, parameter_dict=None):

@@ -62,6 +62,7 @@ class AgentVisualizer(object):
       file_types: list of str, specifies the file types to generate.
       filename_format: str, format to use for saving files.
     """
+    print('! AgentVisualizer(%s,%s)'%(screen_width, screen_height))
     self.record_path = record_path
     self.plotters = plotters
     self.screen_width = screen_width
@@ -122,5 +123,6 @@ class AgentVisualizer(object):
     file_regex = self.filename_format.replace('{:', '%').replace('}', '')
     file_regex += '.png'
     subprocess.call(['ffmpeg', '-r', '30', '-f', 'image2', '-s', '1920x1080',
+                     '-y', #overwrite video
                      '-i', file_regex, '-vcodec', 'libx264', '-crf', '25',
                      '-pix_fmt', 'yuv420p', video_file])
