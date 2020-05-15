@@ -40,20 +40,23 @@ flags.DEFINE_boolean(
 FLAGS = flags.FLAGS
 
 # run main
+
+
 def main(_):
     # python -m bubble.main --agent=hello
     if FLAGS.agent == 'hello':
-        print('hello %s'%(FLAGS.game))
+        print('hello %s' % (FLAGS.game))
         exit(-1)
-    
+
     # run main
     bubble_agent.run(agent=FLAGS.agent,
-                      game=FLAGS.game,
-                      level=FLAGS.level,
-                      num_steps=FLAGS.steps,
-                      root_dir=FLAGS.root_dir,
-                      restore_ckpt=FLAGS.restore_checkpoint,
-                      use_legacy_checkpoint=FLAGS.use_legacy_checkpoint)
+                     game=FLAGS.game,
+                     level=FLAGS.level,
+                     num_steps=FLAGS.steps,
+                     root_dir=FLAGS.root_dir,
+                     restore_ckpt=FLAGS.restore_checkpoint,
+                     use_legacy_checkpoint=FLAGS.use_legacy_checkpoint)
+
 
 if __name__ == '__main__':
-  app.run(main)
+    app.run(main)

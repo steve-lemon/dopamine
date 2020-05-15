@@ -48,21 +48,23 @@ from tensorflow.contrib import slim as contrib_slim
 from dopamine.utils.example_viz_lib import MyDQNAgent
 from .retro_lib import create_retro_environment
 
+
 class MyBubbleDQNAgent(MyDQNAgent):
     """Sample MyBubbleDQNAgent agent based on DQN"""
+
     def __init__(self, sess, num_actions, summary_writer=None):
-        print('! MyBubbleDQNAgent(%s)'%(num_actions))
-        super(MyBubbleDQNAgent, self).__init__(sess, num_actions, summary_writer=summary_writer)
+        print('! MyBubbleDQNAgent(%s)' % (num_actions))
+        super(MyBubbleDQNAgent, self).__init__(
+            sess, num_actions, summary_writer=summary_writer)
 
     def reload_checkpoint(self, checkpoint_path, use_legacy_checkpoint=False):
         return
 
-    def end_episode(self, reward):
-        
+    # def end_episode(self, reward):
 
-    
+
 def create_bubble_agent(sess, environment, summary_writer=None):
-    #NOTE - bubble has 6 descrete actions. see RetroPreprocessing()
+    # NOTE - bubble has 6 descrete actions. see RetroPreprocessing()
     return MyBubbleDQNAgent(sess, num_actions=6, summary_writer=summary_writer)
 
 
@@ -77,16 +79,18 @@ def run(agent, game, level, num_steps, root_dir, restore_ckpt, use_legacy_checkp
     print('run....')
     level = int(level) if level else 1
     config = """
-        retro_lib.create_retro_environment.game_name = '{}'
-        retro_lib.create_retro_environment.level = '{}'
-        Runner.create_environment_fn = @retro_lib.create_retro_environment
-        WrappedReplayBuffer.replay_capacity = 300
-    """.format(game, level)
+    retro_lib.create_retro_environment.game_name = '{}'
+    retro_lib.create_retro_environment.level = '{}'
+    Runner.create_environment_fn = @retro_lib.create_retro_environment
+    WrappedReplayBuffer.replay_capacity = 300
+  """.format(game, level)
     base_dir = os.path.join(root_dir, 'agent_viz', game, agent)
     gin.parse_config(config)
 
     # 1. create runner.
-    runner = create_runner(base_dir, restore_ckpt, agent, use_legacy_checkpoint)
+    runner = create_runner(base_dir, restore_ckpt,
+                           agent, use_legacy_checkpoint)
 
     # 2. visualize
-    runner.visualize(os.path.join(base_dir, 'images'), num_global_steps=num_steps)
+    runner.visualize(os.path.join(base_dir, 'images'),
+                     num_global_steps=num_steps)
