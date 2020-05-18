@@ -60,12 +60,19 @@ class MyBubbleDQNAgent(MyDQNAgent):
     def reload_checkpoint(self, checkpoint_path, use_legacy_checkpoint=False):
         return
 
-    # def end_episode(self, reward):
+    def begin_episode(self, observation):
+        print('! begin_episode()')
+        return super(MyBubbleDQNAgent, self).begin_episode(observation)
+
+    def end_episode(self, reward):
+        print('! end_episode(%s)'%reward)
+        return super(MyBubbleDQNAgent, self).end_episode(reward)
 
 
 def create_bubble_agent(sess, environment, summary_writer=None):
     # NOTE - bubble has 6 descrete actions. see RetroPreprocessing()
-    return MyBubbleDQNAgent(sess, num_actions=6, summary_writer=summary_writer)
+    # return MyBubbleDQNAgent(sess, num_actions=6, summary_writer=summary_writer)
+    return MyBubbleDQNAgent(sess, num_actions=environment.action_space.n, summary_writer=summary_writer)
 
 
 def create_runner(base_dir, trained_agent_ckpt_path, agent='dqn', use_legacy_checkpoint=False):
@@ -82,6 +89,7 @@ def run(agent, game, level, num_steps, root_dir, restore_ckpt, use_legacy_checkp
     retro_lib.create_retro_environment.game_name = '{}'
     retro_lib.create_retro_environment.level = '{}'
     Runner.create_environment_fn = @retro_lib.create_retro_environment
+    DQNAgent.epsilon_eval = 0.1
     WrappedReplayBuffer.replay_capacity = 300
   """.format(game, level)
     base_dir = os.path.join(root_dir, 'agent_viz', game, agent)

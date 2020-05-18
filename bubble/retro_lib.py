@@ -57,6 +57,7 @@ class RetroPreprocessing(object):
         self.lives = 0  # Will need to be set by reset().
         self.last_score = 0  # NOTE - to use score as reward
         self.last_level = 0  # NOTE - level must be same.
+        self.last_lives = 0  # NOTE - level must be same.
 
         # NOTE - core actions for BubbleBobble.
         self.mapping = {
@@ -76,7 +77,8 @@ class RetroPreprocessing(object):
 
     @property
     def action_space(self):
-        return self.environment.action_space
+        #return self.environment.action_space
+        return gym.spaces.Discrete(len(self.mapping.keys()))
 
     @property
     def reward_range(self):
@@ -97,6 +99,7 @@ class RetroPreprocessing(object):
         self.lives = info['lives']
         self.last_score = info['score']
         self.last_level = info['level']
+        self.last_lives = info['lives']
         self._fetch_grayscale_observation(obs, self.screen_buffer[0])
         self.screen_buffer[1].fill(0)
         return self._pool_and_resize()
@@ -112,6 +115,7 @@ class RetroPreprocessing(object):
 
         last_score = self.last_score
         last_level = self.last_level
+        last_lives = self.last_lives
         for time_step in range(self.frame_skip):
             # We bypass the Gym observation altogether and directly fetch the
             # grayscale image from the ALE. This is a little faster.
@@ -120,6 +124,7 @@ class RetroPreprocessing(object):
             #accumulated_reward += reward
             last_score = int(info['score']) if 'score' in info else last_score
             last_level = int(info['level']) if 'level' in info else last_level
+            last_lives = int(info['lives']) if 'lives' in info else last_lives
 
             if self.terminal_on_life_loss:
                 new_lives = info['lives']
@@ -141,12 +146,11 @@ class RetroPreprocessing(object):
         # NOTE - update last-score to save.
         accumulated_reward = last_score - self.last_score
         self.last_score = last_score
-        is_terminal = True if self.last_level != last_level else is_terminal
-        print('> step(%s): %s -> %d %s' %
-              (a, action, accumulated_reward, 'FIN!' if is_terminal else ''))
-        # TODO - optimize to reset on terminal. @steve
-        if is_terminal:
-            self.reset()
+        # is_terminal = True if self.last_level != last_level else is_terminal
+        game_over = True if self.last_level != last_level else game_over
+        game_over = True if self.last_lives != last_lives else game_over
+        # print('> step(%s): %s -> %d %s' %(a, action, accumulated_reward, 'FIN!' if is_terminal else ''))
+        print('> step(%s): %s -> %d %s' %(a, action, accumulated_reward, 'OVR!' if game_over else ''))
 
         self.game_over = game_over
         return observation, accumulated_reward, is_terminal, info
