@@ -150,7 +150,7 @@ class RetroPreprocessing(object):
         game_over = True if self.last_level != last_level else game_over
         game_over = True if self.last_lives != last_lives else game_over
         # print('> step(%s): %s -> %d %s' %(a, action, accumulated_reward, 'FIN!' if is_terminal else ''))
-        print('> step(%s): %s -> %d %s' %(a, action, accumulated_reward, 'OVR!' if game_over else ''))
+        # print('> step(%s): %s -> %d %s' %(a, action, accumulated_reward, 'OVR!' if game_over else ''))
 
         self.game_over = game_over
         return observation, accumulated_reward, is_terminal, info

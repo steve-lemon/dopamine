@@ -194,8 +194,8 @@ class Runner(object):
     self._summary_writer.add_graph(graph=tf.get_default_graph())
     self._sess.run(tf.global_variables_initializer())
 
-    #TODO:Steve - failure due to missing checkpoint file.
-    # self._initialize_checkpointer_and_maybe_resume(checkpoint_file_prefix)
+    #TODO(Steve) - failure due to missing checkpoint file.
+    self._initialize_checkpointer_and_maybe_resume(checkpoint_file_prefix)
 
   def _create_directories(self):
     """Create necessary sub-directories."""
@@ -473,6 +473,7 @@ class Runner(object):
   def run_experiment(self):
     """Runs a full experiment, spread over multiple iterations."""
     tf.logging.info('Beginning training...')
+    tf.logging.info('> iteration range: %d ~ %d'%(self._start_iteration, self._num_iterations))
     if self._num_iterations <= self._start_iteration:
       tf.logging.warning('num_iterations (%d) < start_iteration(%d)',
                          self._num_iterations, self._start_iteration)

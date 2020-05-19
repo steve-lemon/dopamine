@@ -1,5 +1,6 @@
 # run_experiment
 # python -um dopamine.discrete_domains.train --base_dir=/tmp/bubble --gin_files='bubble/dqn_nature.gin'
+# python -um dopamine.discrete_domains.train --base_dir=/tmp/bubble --gin_files='bubble/dqn_nature.gin' --gin_bindings='DQNAgent.tf_device="/cpu:*"'
  
 
 # Hyperparameters used in Mnih et al. (2015).
