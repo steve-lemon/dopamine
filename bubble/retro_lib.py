@@ -163,9 +163,23 @@ class RetroPreprocessing(object):
         # downsample
         # img = cv2.resize(img, (target_width, target_height))
         # to grayscal
-        obs = cv2.cvtColor(obs, cv2.COLOR_RGB2GRAY)
+        # obs = cv2.cvtColor(obs, cv2.COLOR_RGB2GRAY)
+        obs = self.process2HSV(obs)
         np.copyto(output, obs)
         return output
+
+    def process2HSV(self, obs):
+        from matplotlib.colors import rgb_to_hsv
+        obs = rgb_to_hsv(obs)
+        MIN, MAX = 100, 360       # ROI
+        obs = obs[:,:,0] * 360    # use HUE color space.
+        obs = obs + 360 - 200     # rotate by 200 degree.
+        obs[obs > 360] -= 360
+        obs[obs < MIN] = MIN
+        obs[obs > MAX] = MAX
+        obs = 255.0 * (obs - MIN) / (MAX - MIN)
+        obs = obs.astype(np.uint8)
+        return obs
 
     def _pool_and_resize(self):
         # Pool if there are enough screens to do so.
