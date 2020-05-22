@@ -35,7 +35,7 @@ class RetroPreprocessing(object):
     '''RetroPreprocessing
     - wrapper of origin environment for pre-processing.
     '''
-    def __init__(self, environment, frame_skip=4, terminal_on_life_loss=True, screen_size=84):
+    def __init__(self, environment, frame_skip=4, terminal_on_life_loss=True, screen_size=84, wall_offset=200):
         if frame_skip <= 0:
             raise ValueError(
                 'Frame skip should be strictly positive, got {}'.format(frame_skip))
@@ -47,6 +47,7 @@ class RetroPreprocessing(object):
         self.terminal_on_life_loss = terminal_on_life_loss
         self.frame_skip = frame_skip
         self.screen_size = screen_size
+        self.wall_offset = wall_offset   # NOTE - X offset of WALL.
 
         obs_dims = self.environment.observation_space
         # Stores temporary observations used for pooling over two successive
@@ -104,12 +105,19 @@ class RetroPreprocessing(object):
         self.last_lives = info['lives']
         #print('! obs.shape={}'.format(np.shape(obs)))
         # NOTE - detect colors of wall for clearance.
-        woff = 200
-        wall = obs[woff:woff+8,0:8,]      # find wall position.
-        wall = np.reshape(wall, (64, 3))  # reshape to list of RGB
-        wall = np.unique(wall, axis = 0)  # as [[240 120 248] [248 196 248]]
-        #print('! wall({})={}'.format(np.shape(wall), wall))
-        self.last_walls = wall
+        self.last_walls = []
+        if self.wall_offset > 0:
+            woff = self.wall_offset
+            wall = obs[woff:woff+8,0:8,]      # find wall position.
+            wall = np.reshape(wall, (64, 3))  # reshape to list of RGB
+            wall = np.unique(wall, axis = 0)  # as [[240 120 248] [248 196 248]]
+            #print('! wall({})={}'.format(np.shape(wall), wall))
+            #self.last_walls = wall
+            for w in wall:
+                if not np.all(w == [0,0,0]):        
+                    self.last_walls.append(w)
+            self.last_walls = np.array(self.last_walls)
+        #print('! wall({})={}'.format(np.shape(self.last_walls), self.last_walls))
         #! fill with initial screen
         self._fetch_grayscale_observation(obs, self.screen_buffer[0])
         self.screen_buffer[1].fill(0)
@@ -169,8 +177,9 @@ class RetroPreprocessing(object):
     def _fetch_grayscale_observation(self, obs, output):
         # clear walls
         for wall in self.last_walls:
-            masked = np.all(obs == wall, axis=-1)
-            obs[masked] = [255,32,32]
+            # masked = np.all(obs == wall, axis=-1)
+            # obs[masked] = [255,32,32]
+            obs[np.all(obs == wall, axis=2)] = [255,32,32]
         # use Green channel as grayscale (SIMPLE BUT FAST)
         obs = obs[:,:,1]
         np.copyto(output, obs)
