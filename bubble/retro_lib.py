@@ -32,6 +32,9 @@ def create_retro_environment(game_name=None, sticky_actions=True, level=None):
 
 @gin.configurable
 class RetroPreprocessing(object):
+    '''RetroPreprocessing
+    - wrapper of origin environment for pre-processing.
+    '''
     def __init__(self, environment, frame_skip=4, terminal_on_life_loss=True, screen_size=84):
         if frame_skip <= 0:
             raise ValueError(
@@ -58,6 +61,7 @@ class RetroPreprocessing(object):
         self.last_score = 0  # NOTE - to use score as reward
         self.last_level = 0  # NOTE - level must be same.
         self.last_lives = 0  # NOTE - level must be same.
+        self.last_walls = [] # NOTE - to replace wall to some
 
         # NOTE - core actions for BubbleBobble.
         self.mapping = {
@@ -72,12 +76,11 @@ class RetroPreprocessing(object):
     @property
     def observation_space(self):
         # Return the observation space adjusted to match the shape of the processed
-        # observations.
         return Box(low=0, high=255, shape=(self.screen_size, self.screen_size, 1), dtype=np.uint8)
 
     @property
     def action_space(self):
-        #return self.environment.action_space
+        # Return the discrete counts for actions
         return gym.spaces.Discrete(len(self.mapping.keys()))
 
     @property
@@ -94,12 +97,20 @@ class RetroPreprocessing(object):
     def reset(self):
         self.environment.reset()
         # NOTE - catch initial state by one-step.
-        # self.lives = self.environment.ale.lives()
         obs, reward, game_over, info = self.environment.step([0])
         self.lives = info['lives']
         self.last_score = info['score']
         self.last_level = info['level']
         self.last_lives = info['lives']
+        print('! obs.shape={}'.format(np.shape(obs)))
+        # NOTE - detect colors of wall for clearance.
+        woff = 200
+        wall = obs[woff:woff+8,0:8,]      # find wall position.
+        wall = np.reshape(wall, (64, 3))  # reshape to list of RGB
+        wall = np.unique(wall, axis = 0)  # as [[240 120 248] [248 196 248]]
+        print('! wall({})={}'.format(np.shape(wall), wall))
+        self.last_walls = wall
+        #! fill with initial screen
         self._fetch_grayscale_observation(obs, self.screen_buffer[0])
         self.screen_buffer[1].fill(0)
         return self._pool_and_resize()
@@ -156,30 +167,14 @@ class RetroPreprocessing(object):
         return observation, accumulated_reward, is_terminal, info
 
     def _fetch_grayscale_observation(self, obs, output):
-        # self.environment.ale.getScreenGrayscale(output)
-        # TODO - use `plt.imshow(obs.squeeze(), cmap='gray')`
-        # Convert RGB to BGR for cv2
-        # obs = obs[:,:,::-1]
-        # downsample
-        # img = cv2.resize(img, (target_width, target_height))
-        # to grayscal
-        # obs = cv2.cvtColor(obs, cv2.COLOR_RGB2GRAY)
-        obs = self.process2HSV(obs)
+        # clear walls
+        for wall in self.last_walls:
+            masked = np.all(obs == wall, axis=-1)
+            obs[masked] = [255,32,32]
+        # use Green channel as grayscale (SIMPLE BUT FAST)
+        obs = obs[:,:,1]
         np.copyto(output, obs)
         return output
-
-    def process2HSV(self, obs):
-        from matplotlib.colors import rgb_to_hsv
-        obs = rgb_to_hsv(obs)
-        MIN, MAX = 100, 360       # ROI
-        obs = obs[:,:,0] * 360    # use HUE color space.
-        obs = obs + 360 - 200     # rotate by 200 degree.
-        obs[obs > 360] -= 360
-        obs[obs < MIN] = MIN
-        obs[obs > MAX] = MAX
-        obs = 255.0 * (obs - MIN) / (MAX - MIN)
-        obs = obs.astype(np.uint8)
-        return obs
 
     def _pool_and_resize(self):
         # Pool if there are enough screens to do so.
@@ -192,3 +187,9 @@ class RetroPreprocessing(object):
                                        interpolation=cv2.INTER_AREA)
         int_image = np.asarray(transformed_image, dtype=np.uint8)
         return np.expand_dims(int_image, axis=2)
+    
+    def asImage(self, img = None, tpy = None):
+        from PIL import Image
+        img = img if img is not None else self._pool_and_resize().squeeze()
+        tpy = tpy if tpy is not None else 'P'
+        return Image.fromarray(img, tpy)
