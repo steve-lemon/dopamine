@@ -102,13 +102,13 @@ class RetroPreprocessing(object):
         self.last_score = info['score']
         self.last_level = info['level']
         self.last_lives = info['lives']
-        print('! obs.shape={}'.format(np.shape(obs)))
+        #print('! obs.shape={}'.format(np.shape(obs)))
         # NOTE - detect colors of wall for clearance.
         woff = 200
         wall = obs[woff:woff+8,0:8,]      # find wall position.
         wall = np.reshape(wall, (64, 3))  # reshape to list of RGB
         wall = np.unique(wall, axis = 0)  # as [[240 120 248] [248 196 248]]
-        print('! wall({})={}'.format(np.shape(wall), wall))
+        #print('! wall({})={}'.format(np.shape(wall), wall))
         self.last_walls = wall
         #! fill with initial screen
         self._fetch_grayscale_observation(obs, self.screen_buffer[0])
