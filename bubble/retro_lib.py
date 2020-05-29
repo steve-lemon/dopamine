@@ -59,10 +59,11 @@ class RetroPreprocessing(object):
 
         self.game_over = False
         self.lives = 0  # Will need to be set by reset().
-        self.last_score = 0  # NOTE - to use score as reward
-        self.last_level = 0  # NOTE - level must be same.
-        self.last_lives = 0  # NOTE - level must be same.
-        self.last_walls = [] # NOTE - to replace wall to some
+        self.last_score = 0     # last number of score
+        self.last_level = 0     # last count of level
+        self.last_lives = 0     # last count of lives
+        self.last_enems = 0     # last count of enemies
+        self.last_walls = []    # TODO - IMPROVE to replace wall-color for every level.
 
         # NOTE - core actions for BubbleBobble.
         self.mapping = {
@@ -100,9 +101,10 @@ class RetroPreprocessing(object):
         # NOTE - catch initial state by one-step.
         obs, reward, game_over, info = self.environment.step([0])
         self.lives = info['lives']
-        self.last_score = info['score']
-        self.last_level = info['level']
-        self.last_lives = info['lives']
+        self.last_score = int(info['score']) if 'score' in info else 0
+        self.last_level = int(info['level']) if 'level' in info else 0
+        self.last_lives = int(info['lives']) if 'lives' in info else 0
+        self.last_enems = int(info['enemies']) if 'enemies' in info else 0
         #print('! obs.shape={}'.format(np.shape(obs)))
         # NOTE - detect colors of wall for clearance.
         self.last_walls = []
@@ -132,21 +134,24 @@ class RetroPreprocessing(object):
         #print('> step(%s): %s'%(a, action))
         accumulated_reward = 0.
 
-        last_score = self.last_score
-        last_level = self.last_level
-        last_lives = self.last_lives
+        curr_level = self.last_level
+        curr_score = self.last_score
+        curr_lives = self.last_lives
+        curr_enems = self.last_enems
         for time_step in range(self.frame_skip):
             # We bypass the Gym observation altogether and directly fetch the
             # grayscale image from the ALE. This is a little faster.
             obs, reward, game_over, info = self.environment.step(action)
-            # NOTE - use custom reward by info['score']
+            # NOTE - use custom reward by _calculate_step_reward()
             #accumulated_reward += reward
-            last_score = int(info['score']) if 'score' in info else last_score
-            last_level = int(info['level']) if 'level' in info else last_level
-            last_lives = int(info['lives']) if 'lives' in info else last_lives
+            curr_level = int(info['level']) if 'level' in info else curr_level
+            curr_score = int(info['score']) if 'score' in info else curr_score
+            curr_lives = int(info['lives']) if 'lives' in info else curr_lives
+            curr_enems = int(info['enemies']) if 'enemies' in info else curr_enems
 
+            #! determine if terminal
             if self.terminal_on_life_loss:
-                new_lives = info['lives']
+                new_lives = curr_lives
                 is_terminal = game_over or new_lives < self.lives
                 self.lives = new_lives
             else:
@@ -154,7 +159,8 @@ class RetroPreprocessing(object):
 
             if is_terminal:
                 break
-            # We max-pool over the last two frames, in grayscale.
+
+            #! We max-pool over the last two frames, in grayscale.
             elif time_step >= self.frame_skip - 2:
                 t = time_step - (self.frame_skip - 2)
                 self._fetch_grayscale_observation(obs, self.screen_buffer[t])
@@ -162,15 +168,21 @@ class RetroPreprocessing(object):
         # Pool the last two observations.
         observation = self._pool_and_resize()
 
-        # NOTE - update last-score to save.
-        accumulated_reward = last_score - self.last_score
-        self.last_score = last_score
-        # is_terminal = True if self.last_level != last_level else is_terminal
-        game_over = True if self.last_level != last_level else game_over
-        game_over = True if self.last_lives != last_lives else game_over
-        # print('> step(%s): %s -> %d %s' %(a, action, accumulated_reward, 'FIN!' if is_terminal else ''))
-        # print('> step(%s): %s -> %d %s' %(a, action, accumulated_reward, 'OVR!' if game_over else ''))
+        #! calculate the result reward..
+        accumulated_reward = self._calculate_step_reward(curr_level, curr_score, curr_lives, curr_enems, game_over)
 
+        #! customize game_over....
+        # is_terminal = True if self.last_level != last_level else is_terminal
+        # game_over = True if self.last_level != last_level else game_over
+        # game_over = True if self.last_lives != last_lives else game_over
+        # print('> step(%s): %s -> %.4f %s' %(a, action, accumulated_reward, 'FIN!' if is_terminal else ''))
+        # print('> step(%s): %s -> %.4f %s' %(a, action, accumulated_reward, 'OVR!' if game_over else ''))
+
+        # NOTE - save the latest status...
+        self.last_score = curr_score
+        self.last_level = curr_level
+        self.last_lives = curr_lives
+        self.last_enems = curr_enems
         self.game_over = game_over
         return observation, accumulated_reward, is_terminal, info
 
@@ -202,3 +214,31 @@ class RetroPreprocessing(object):
         img = img if img is not None else self._pool_and_resize().squeeze()
         tpy = tpy if tpy is not None else 'P'
         return Image.fromarray(img, tpy)
+
+    def _calculate_step_reward(self, curr_level, curr_score, curr_lives, curr_enems, game_over):
+        """
+        reward for score configuration:
+        [objective]
+        - survive as long as possible
+        - achieve as mush as score
+        - complete level as quick as possible.
+        """
+        PENALITY = -0.01                            # penalty to finish level quickly
+        acc_rew = PENALITY
+        # kill an enemy
+        # NOTE - it might have double reward along with score!!!! (1 kill -> 100 score)
+        if self.last_enems > curr_enems:
+            acc_rew += 1 * (self.last_enems - curr_enems)
+        # lost a life
+        if self.last_lives > curr_lives:
+            acc_rew += -3 * (self.last_lives - curr_lives)
+        # get enhancement in log scale.
+        if self.last_score > curr_score:
+            acc_rew += 0 - PENALITY + math.log(curr_score - self.last_score, 100)  # score 1 -> 0.0 (so, no penalty)
+        # successful end of level stage.
+        if self.last_level > curr_level:
+            acc_rew += 5 * (self.last_level - curr_level)
+        # trim decimal
+        # acc_rew = int(acc_rew * 1024) / 1024
+        # return with total.
+        return acc_rew
