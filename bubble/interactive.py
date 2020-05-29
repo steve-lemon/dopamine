@@ -3,7 +3,10 @@ Interact with Gym environments using the keyboard
 An adapter object is defined for each environment to map keyboard commands to actions and extract observations as pixels.
 """
 # origin: https://github.com/openai/retro/blob/master/retro/examples/interactive.py
-# run level 2: python interactive.py --level=2
+# -------------
+# run level 2
+# $ python -m bubble.interactive --level=2
+#
 
 import sys
 import ctypes
@@ -72,6 +75,7 @@ class Interactive(abc.ABC):
         self._episode_steps = 0
         self._episode_returns = 0
         self._prev_episode_returns = 0
+        self._score = 0
 
         self._tps = tps
         self._sync = sync
@@ -119,6 +123,11 @@ class Interactive(abc.ABC):
 
             if not self._sync or act is not None:
                 obs, rew, done, _info = self._env.step(act)
+                #! analysing the origin reward + score value.
+                if rew > 0 or _info['score'] > self._score:
+                    # kill enemy -> 100. jewery -> 20. bubble -> 1. so user-score := score x 10 
+                    print('> rew = {} scr = {:>3} / {:>4}'.format(rew, _info['score'] - self._score, _info['score']))
+                    self._score = _info['score']
                 self._image = self.get_image(obs, self._env)
                 self._episode_returns += rew
                 self._steps += 1
