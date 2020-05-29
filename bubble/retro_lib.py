@@ -35,7 +35,7 @@ class RetroPreprocessing(object):
     '''RetroPreprocessing
     - wrapper of origin environment for pre-processing.
     '''
-    def __init__(self, environment, frame_skip=4, terminal_on_life_loss=True, screen_size=84, wall_offset=200):
+    def __init__(self, environment, frame_skip=4, terminal_on_life_loss=True, screen_size=84, wall_offset=200, step_penilty=-0.001):
         if frame_skip <= 0:
             raise ValueError(
                 'Frame skip should be strictly positive, got {}'.format(frame_skip))
@@ -48,6 +48,7 @@ class RetroPreprocessing(object):
         self.frame_skip = frame_skip
         self.screen_size = screen_size
         self.wall_offset = wall_offset   # NOTE - X offset of WALL.
+        self.step_penality = step_penilty
 
         obs_dims = self.environment.observation_space
         # Stores temporary observations used for pooling over two successive
@@ -223,7 +224,7 @@ class RetroPreprocessing(object):
         - achieve as mush as score
         - complete level as quick as possible.
         """
-        PENALITY = -0.01                            # penalty to finish level quickly
+        PENALITY = self.step_penilty                            # penalty to finish level quickly
         acc_rew = PENALITY
         # kill an enemy
         # NOTE - it might have double reward along with score!!!! (1 kill -> 100 score)
