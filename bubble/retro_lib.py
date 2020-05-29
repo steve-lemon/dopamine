@@ -35,7 +35,7 @@ class RetroPreprocessing(object):
     '''RetroPreprocessing
     - wrapper of origin environment for pre-processing.
     '''
-    def __init__(self, environment, frame_skip=4, terminal_on_life_loss=True, screen_size=84, wall_offset=200, step_penilty=-0.001):
+    def __init__(self, environment, frame_skip=4, terminal_on_life_loss=True, screen_size=84, wall_offset=200, step_penality=-0.0001):
         if frame_skip <= 0:
             raise ValueError(
                 'Frame skip should be strictly positive, got {}'.format(frame_skip))
@@ -43,14 +43,14 @@ class RetroPreprocessing(object):
             raise ValueError(
                 'Target screen size should be strictly positive, got {}'.format(screen_size))
 
-        print('! RetroPreprocessing: wall_offset={}, step_penilty={}'.format(wall_offset, step_penilty))
-
         self.environment = environment
         self.terminal_on_life_loss = terminal_on_life_loss
         self.frame_skip = frame_skip
         self.screen_size = screen_size
-        self.wall_offset = wall_offset   # NOTE - X offset of WALL.
-        self.step_penality = step_penilty
+        self.wall_offset = wall_offset                  # NOTE - X offset of WALL.
+        self.step_penality = step_penality if 1 else 0
+
+        print('! RetroPreprocessing: wall_offset={}, step_penality={}'.format(self.wall_offset, self.step_penality))
 
         obs_dims = self.environment.observation_space
         # Stores temporary observations used for pooling over two successive
@@ -182,8 +182,8 @@ class RetroPreprocessing(object):
         # print('> step(%s): %s -> %.4f %s' %(a, action, accumulated_reward, 'OVR!' if game_over else ''))
 
         # NOTE - save the latest status...
-        self.last_score = curr_score
         self.last_level = curr_level
+        self.last_score = curr_score
         self.last_lives = curr_lives
         self.last_enems = curr_enems
         self.game_over = game_over
@@ -226,7 +226,7 @@ class RetroPreprocessing(object):
         - achieve as mush as score
         - complete level as quick as possible.
         """
-        PENALITY = self.step_penilty                            # penalty to finish level quickly
+        PENALITY = self.step_penality                            # penalty to finish level quickly
         acc_rew = PENALITY
         # kill an enemy
         # NOTE - it might have double reward along with score!!!! (1 kill -> 100 score)
@@ -234,13 +234,13 @@ class RetroPreprocessing(object):
             acc_rew += 1 * (self.last_enems - curr_enems)
         # lost a life
         if self.last_lives > curr_lives:
-            acc_rew += -3 * (self.last_lives - curr_lives)
+            acc_rew += -1 * (self.last_lives - curr_lives)      # max 3x lives
         # get enhancement in log scale.
         if self.last_score > curr_score:
             acc_rew += 0 - PENALITY + math.log(curr_score - self.last_score, 100)  # score 1 -> 0.0 (so, no penalty)
         # successful end of level stage.
         if self.last_level > curr_level:
-            acc_rew += 5 * (self.last_level - curr_level)
+            acc_rew += 5 * (self.last_level - curr_level)       # 
         # trim decimal
         # acc_rew = int(acc_rew * 1024) / 1024
         # return with total.
