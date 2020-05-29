@@ -43,6 +43,8 @@ class RetroPreprocessing(object):
             raise ValueError(
                 'Target screen size should be strictly positive, got {}'.format(screen_size))
 
+        print('! RetroPreprocessing: wall_offset={}, step_penilty={}'.format(wall_offset, step_penilty))
+
         self.environment = environment
         self.terminal_on_life_loss = terminal_on_life_loss
         self.frame_skip = frame_skip
