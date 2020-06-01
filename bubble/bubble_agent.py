@@ -58,7 +58,8 @@ class MyBubbleDQNAgent(MyDQNAgent):
             sess, num_actions, summary_writer=summary_writer)
 
     def reload_checkpoint(self, checkpoint_path, use_legacy_checkpoint=False):
-        return
+        print('! reload_checkpoint()')
+        return super(MyBubbleDQNAgent, self).reload_checkpoint(checkpoint_path, use_legacy_checkpoint)
 
     def begin_episode(self, observation):
         print('! begin_episode()')
