@@ -3,7 +3,7 @@ r"""
 Sample file to generate visualizations.
 
 - simple run
-`$ python -m bubble.main --level=1 --steps=500 --restore_checkpoint=/tmp/bubble_dqn4/checkpoints/ckpt.85`
+`$ python -m bubble.main --level=1 --steps=500 --restore_checkpoint=/tmp/bubble_dqn4/checkpoints/tf_ckpt-86`
 
 - more paremeters.
 ```

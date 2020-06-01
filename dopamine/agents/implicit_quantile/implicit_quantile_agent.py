@@ -94,6 +94,13 @@ class ImplicitQuantileAgent(rainbow_agent.RainbowAgent):
         summary_writer=summary_writer,
         summary_writing_frequency=summary_writing_frequency)
 
+    tf.logging.info('\t kappa: %f', kappa)
+    tf.logging.info('\t num_tau_samples: %d', num_tau_samples)
+    tf.logging.info('\t num_tau_prime_samples: %d', num_tau_prime_samples)
+    tf.logging.info('\t num_quantile_samples: %d', num_quantile_samples)
+    tf.logging.info('\t quantile_embedding_dim: %d', quantile_embedding_dim)
+    tf.logging.info('\t double_dqn: %s', double_dqn)
+
   def _create_network(self, name):
     r"""Builds an Implicit Quantile ConvNet.
 
