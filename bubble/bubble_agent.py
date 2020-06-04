@@ -78,9 +78,11 @@ def create_bubble_agent(sess, environment, summary_writer=None):
 
 def create_runner(base_dir, trained_agent_ckpt_path, agent='dqn', use_legacy_checkpoint=False):
     from dopamine.utils.example_viz_lib import create_dqn_agent, create_rainbow_agent, MyRunner
+    from . import bubble_runner
     create_agent = create_dqn_agent if agent == 'dqn' else create_rainbow_agent
     create_agent = create_bubble_agent if agent == 'bubble' else create_rainbow_agent
-    return MyRunner(base_dir, trained_agent_ckpt_path, create_agent, use_legacy_checkpoint)
+    # return MyRunner(base_dir, trained_agent_ckpt_path, create_agent, use_legacy_checkpoint)
+    return bubble_runner.BubbleRunner(base_dir, trained_agent_ckpt_path, create_agent, use_legacy_checkpoint)
 
 
 def run(agent, game, level, num_steps, root_dir, restore_ckpt, use_legacy_checkpoint):
