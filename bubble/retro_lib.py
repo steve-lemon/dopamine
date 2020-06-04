@@ -17,17 +17,11 @@ import cv2
 
 
 @gin.configurable
-def create_retro_environment(game_name=None, sticky_actions=True, level=None):
+def create_retro_environment(game_name='BubbleBobble', sticky_actions=True, level=1):
     '''create retro game'''
-    assert game_name is not None
-    rom_name = 'Nes' if sticky_actions else 'Nes'
-    level = int(level) if level else 1
-    full_game_name = '{}-{}'.format(game_name, rom_name)
-    state = 'Level%02d' % level if level else retro.State.DEFAULT
-    print('! create-retro-game: %s/%s' % (full_game_name, state))
-    env = retro.make(game=full_game_name, state=state)
-    env = RetroPreprocessing(env)
-    return env
+    print('! create_retro_environment: %s/%d' % (game_name, level))
+    env = RetroPreprocessing.createRetroGameEnv(game_name, sticky_actions, level)
+    return RetroPreprocessing(env, game_level=1)
 
 
 @gin.configurable
@@ -35,7 +29,33 @@ class RetroPreprocessing(object):
     '''RetroPreprocessing
     - wrapper of origin environment for pre-processing.
     '''
-    def __init__(self, environment, frame_skip=4, terminal_on_life_loss=True, screen_size=84, wall_offset=200, step_penality=-0.001):
+    _env = None             # old env created before (must be singleton of retro-env)
+    @staticmethod
+    def createRetroGameEnv(game_name='BubbleBobble', sticky_actions=True, level=1):
+        assert game_name is not None
+        rom_name = 'Nes' if sticky_actions else 'Nes'
+        level = int(level) if level else 1
+        full_game_name = '{}-{}'.format(game_name, rom_name)
+        state = 'Level%02d' % level if level else retro.State.DEFAULT
+        print('! create-retro-game-env: %s/%s' % (full_game_name, state))
+        tf.logging.info('Create RetroGame:%s w/ stage:%s' % (full_game_name, state))
+        # close the previous one
+        if RetroPreprocessing._env is not None:
+            RetroPreprocessing._env.close()
+            RetroPreprocessing._env = None
+        # make env, then cache it.
+        env = retro.make(game=full_game_name, state=state)
+        RetroPreprocessing._env = (env if env else None)
+        return env
+
+    def __init__(self, environment, frame_skip=4, terminal_on_life_loss=True, screen_size=84, wall_offset=200, step_penalty=-0.001, game_level=0):
+        """Constructor for an Atari 2600 preprocessor.
+
+        Args:
+           wall_offset: offset of wall position (0 means no wall-clearance)
+           step_penalty: base penalty per each step.
+           game_level: initial game-level on reset()
+        """
         if frame_skip <= 0:
             raise ValueError(
                 'Frame skip should be strictly positive, got {}'.format(frame_skip))
@@ -48,9 +68,10 @@ class RetroPreprocessing(object):
         self.frame_skip = frame_skip
         self.screen_size = screen_size
         self.wall_offset = wall_offset                  # NOTE - X offset of WALL.
-        self.step_penality = step_penality if 1 else 0
+        self.step_penalty = step_penalty if 1 else 0
+        self.game_level = game_level                    # current level of game. changeable by reset()
 
-        print('! RetroPreprocessing: wall_offset={}, step_penality={}'.format(self.wall_offset, self.step_penality))
+        print('! RetroPreprocessing: wall_offset={}, step_penalty={}, game_level={}'.format(self.wall_offset, self.step_penalty, self.game_level))
 
         obs_dims = self.environment.observation_space
         # Stores temporary observations used for pooling over two successive
@@ -61,7 +82,7 @@ class RetroPreprocessing(object):
         ]
 
         self.game_over = False
-        self.lives = 0  # Will need to be set by reset().
+        self.lives = 0          # Will need to be set by reset().
         self.last_score = 0     # last number of score
         self.last_level = 0     # last count of level
         self.last_lives = 0     # last count of lives
@@ -99,7 +120,16 @@ class RetroPreprocessing(object):
     def close(self):
         return self.environment.close()
 
-    def reset(self):
+    def reset(self, game_level = 0):
+        '''reset to init state
+        Args:
+           game_level: if >0, then should re-create retro env with game-level.
+        '''
+        # re-create the origin env if level has changed.
+        if game_level > 0 and game_level != self.game_level:
+            self.environment = RetroPreprocessing.createRetroGameEnv(level = game_level)
+            self.game_level = game_level
+        # reset to init-state
         self.environment.reset()
         # NOTE - catch initial state by one-step.
         obs, reward, game_over, info = self.environment.step([0])
@@ -187,7 +217,7 @@ class RetroPreprocessing(object):
         self.last_lives = curr_lives
         self.last_enems = curr_enems
         self.game_over = game_over
-        return observation, accumulated_reward + self.step_penality, is_terminal, info
+        return observation, accumulated_reward + self.step_penalty, is_terminal, info
 
     def _fetch_grayscale_observation(self, obs, output):
         # clear walls

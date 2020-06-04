@@ -40,6 +40,7 @@ from dopamine.utils import agent_visualizer
 from dopamine.utils import atari_plotter
 from dopamine.utils import bar_plotter
 from dopamine.utils import line_plotter
+
 import gin
 import numpy as np
 import tensorflow.compat.v1 as tf

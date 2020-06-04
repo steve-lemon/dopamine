@@ -18,6 +18,7 @@ import gin.tf.external_configurables
 # agent for bubble
 import bubble.retro_lib
 import bubble.bubble_agent
+import bubble.bubble_runner
 retro_lib.create_retro_environment.game_name = 'BubbleBobble'
 retro_lib.create_retro_environment.level = 1
 Runner.create_environment_fn = @retro_lib.create_retro_environment
