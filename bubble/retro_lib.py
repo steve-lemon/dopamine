@@ -35,7 +35,7 @@ class RetroPreprocessing(object):
     '''RetroPreprocessing
     - wrapper of origin environment for pre-processing.
     '''
-    def __init__(self, environment, frame_skip=4, terminal_on_life_loss=True, screen_size=84, wall_offset=200, step_penality=-0.0001):
+    def __init__(self, environment, frame_skip=4, terminal_on_life_loss=True, screen_size=84, wall_offset=200, step_penality=-0.001):
         if frame_skip <= 0:
             raise ValueError(
                 'Frame skip should be strictly positive, got {}'.format(frame_skip))
@@ -70,12 +70,12 @@ class RetroPreprocessing(object):
 
         # NOTE - core actions for BubbleBobble.
         self.mapping = {
-            0: [0, 0, 0, 0, 0, 0, 0, 0, 0],  # NOOP
-            1: [1, 0, 0, 0, 0, 0, 0, 0, 0],  # FIRE
-            2: [0, 0, 0, 0, 0, 0, 1, 0, 0],  # LEFT
-            3: [0, 0, 0, 0, 0, 0, 0, 1, 0],  # RIGHT
-            4: [0, 0, 0, 0, 0, 0, 0, 0, 1],  # JUMP
-            5: [1, 0, 0, 0, 0, 0, 0, 0, 1],  # FIRE + JUMP
+            0: [0, 0, 0, 0, 0, 0, 0, 1, 0],  # RIGHT
+            1: [0, 0, 0, 0, 0, 0, 1, 0, 0],  # LEFT
+            2: [0, 0, 0, 0, 0, 0, 0, 0, 1],  # JUMP
+            3: [1, 0, 0, 0, 0, 0, 0, 0, 0],  # FIRE
+            4: [1, 0, 0, 0, 0, 0, 0, 1, 0],  # FIRE + RIGHT
+            5: [1, 0, 0, 0, 0, 0, 1, 0, 0],  # FIRE + LEFT
         }
 
     @property
@@ -187,7 +187,7 @@ class RetroPreprocessing(object):
         self.last_lives = curr_lives
         self.last_enems = curr_enems
         self.game_over = game_over
-        return observation, accumulated_reward, is_terminal, info
+        return observation, accumulated_reward + self.step_penality, is_terminal, info
 
     def _fetch_grayscale_observation(self, obs, output):
         # clear walls
@@ -226,21 +226,20 @@ class RetroPreprocessing(object):
         - achieve as mush as score
         - complete level as quick as possible.
         """
-        PENALITY = self.step_penality                            # penalty to finish level quickly
-        acc_rew = PENALITY
+        acc_rew = 0
         # kill an enemy
-        # NOTE - it might have double reward along with score!!!! (1 kill -> 100 score)
+        # with double reward along with score (1 kill -> 100 score)
         if self.last_enems > curr_enems:
             acc_rew += 1 * (self.last_enems - curr_enems)
         # lost a life
         if self.last_lives > curr_lives:
-            acc_rew += -1 * (self.last_lives - curr_lives)      # max 3x lives
+            acc_rew += -5 * (self.last_lives - curr_lives)      # max 3x lives
         # get enhancement in log scale.
-        if self.last_score > curr_score:
-            acc_rew += 0 - PENALITY + math.log(curr_score - self.last_score, 100)  # score 1 -> 0.0 (so, no penalty)
+        if curr_score > (self.last_score + 1):
+            acc_rew += math.log(curr_score - self.last_score, 100)  # score 1 -> 0.0 (so, no penalty)
         # successful end of level stage.
-        if self.last_level > curr_level:
-            acc_rew += 5 * (self.last_level - curr_level)       # 
+        #if self.last_level > curr_level:
+        #   acc_rew += 5 * (self.last_level - curr_level)       #
         # trim decimal
         # acc_rew = int(acc_rew * 1024) / 1024
         # return with total.
