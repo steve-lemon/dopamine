@@ -37,7 +37,7 @@ class RetroPreprocessing(object):
         level = int(level) if level else 1
         full_game_name = '{}-{}'.format(game_name, rom_name)
         state = 'Level%02d' % level if level else retro.State.DEFAULT
-        print('! create-retro-game-env: %s/%s' % (full_game_name, state))
+        # print('! create-retro-game-env: %s/%s' % (full_game_name, state))
         tf.logging.info('Create RetroGame:%s w/ stage:%s' % (full_game_name, state))
         # close the previous one
         if RetroPreprocessing._env is not None:
