@@ -91,7 +91,7 @@ def run(agent, game, level, num_steps, root_dir, restore_ckpt, use_legacy_checkp
     level = int(level) if level else 1
     config = """
     retro_lib.create_retro_environment.game_name = '{}'
-    retro_lib.create_retro_environment.level = '{}'
+    retro_lib.create_retro_environment.level = {}
     Runner.create_environment_fn = @retro_lib.create_retro_environment
     DQNAgent.epsilon_eval = 0.1
     DQNAgent.tf_device = '/cpu:*'
