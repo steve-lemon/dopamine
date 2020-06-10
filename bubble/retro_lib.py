@@ -222,7 +222,7 @@ class RetroPreprocessing(object):
         for wall in self.last_walls:
             # masked = np.all(obs == wall, axis=-1)
             # obs[masked] = [255,32,32]
-            obs[np.all(obs == wall, axis=2)] = [255,32,32]
+            obs[np.all(obs == wall, axis=2)] = [255,62,62]
         # use Green channel as grayscale (SIMPLE BUT FAST)
         obs = obs[:,:,1]
         np.copyto(output, obs)

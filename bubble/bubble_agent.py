@@ -128,7 +128,7 @@ class MyObservationPlotter(plotter.Plotter):
             obs = self.obs
             # obs = np.transpose(obs)
             # obs = np.swapaxes(obs, 1, 2)
-            # obs = obs[0] | (obs[0] << 8) | (obs[0] << 16)   # must be grey-scale image
+            # obs = obs[0] | (obs[0] << 8) | (obs[0] << 16)   # must be grey-scale image (or single channel)
             np.copyto(numpy_surface, obs.ravel())
         return pygame.transform.scale(self.game_surface, (self.width, self.height))
 
