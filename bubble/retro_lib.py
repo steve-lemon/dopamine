@@ -174,9 +174,13 @@ class RetroPreprocessing(object):
         for time_step in range(self.frame_skip):
             # We bypass the Gym observation altogether and directly fetch the
             # grayscale image from the ALE. This is a little faster.
+            # TODO(steve) - if holding to press fire-button, it would not fire actually. so clear fire on last frame-skip @200610
+            if self.frame_skip > 2 and time_step + 2 >= self.frame_skip:
+                action[0] = 0           # clear fire key.
+            #! run step to origin game-env.
             obs, reward, game_over, info = self.environment.step(action)
-            # NOTE - use custom reward by _calculate_step_reward()
-            #accumulated_reward += reward
+
+            #! catch the last state of info + game
             curr_level = int(info['level']) if 'level' in info else curr_level
             curr_score = int(info['score']) if 'score' in info else curr_score
             curr_lives = int(info['lives']) if 'lives' in info else curr_lives
@@ -190,6 +194,7 @@ class RetroPreprocessing(object):
             else:
                 is_terminal = game_over
 
+            #! break if terminal
             if is_terminal:
                 break
 
@@ -203,13 +208,6 @@ class RetroPreprocessing(object):
 
         #! calculate the result reward..
         accumulated_reward = self._calculate_step_reward(curr_level, curr_score, curr_lives, curr_enems, game_over)
-
-        #! customize game_over....
-        # is_terminal = True if self.last_level != last_level else is_terminal
-        # game_over = True if self.last_level != last_level else game_over
-        # game_over = True if self.last_lives != last_lives else game_over
-        # print('> step(%s): %s -> %.4f %s' %(a, action, accumulated_reward, 'FIN!' if is_terminal else ''))
-        # print('> step(%s): %s -> %.4f %s' %(a, action, accumulated_reward, 'OVR!' if game_over else ''))
 
         # NOTE - save the latest status...
         self.last_level = curr_level
