@@ -5,6 +5,9 @@ Sample file to generate visualizations.
 - simple run
 `$ python -m bubble.main --level=1 --steps=500 --restore_checkpoint=/tmp/bubble_dqn4/checkpoints/tf_ckpt-86`
 
+- make viz video by agent
+$ python -m bubble.main --agent=bubble --level=1 --steps=500 --restore_checkpoint=/tmp/bubble_dqn7/checkpoints/tf_ckpt-143
+
 - more paremeters.
 ```
 python -m bubble.main \

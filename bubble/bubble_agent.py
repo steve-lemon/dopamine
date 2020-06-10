@@ -47,6 +47,7 @@ import tensorflow.compat.v1 as tf
 from tensorflow.contrib import slim as contrib_slim
 
 from dopamine.utils.example_viz_lib import MyDQNAgent
+from dopamine.agents.implicit_quantile import implicit_quantile_agent
 from .retro_lib import create_retro_environment
 
 
@@ -59,37 +60,78 @@ class MyBubbleDQNAgent(MyDQNAgent):
             sess, num_actions, summary_writer=summary_writer)
 
     def reload_checkpoint(self, checkpoint_path, use_legacy_checkpoint=False):
-        print('! reload_checkpoint()')
+        print('DQN> reload_checkpoint()')
+        if checkpoint_path is None:
+            return
         return super(MyBubbleDQNAgent, self).reload_checkpoint(checkpoint_path, use_legacy_checkpoint)
 
     def begin_episode(self, observation):
-        print('! begin_episode()')
+        print('DQN> begin_episode()')
         return super(MyBubbleDQNAgent, self).begin_episode(observation)
 
     def end_episode(self, reward):
-        print('! end_episode(%s)'%reward)
+        print('DQN> end_episode(%s)'%reward)
         return super(MyBubbleDQNAgent, self).end_episode(reward)
 
+class MyBubbleIQNAgent(implicit_quantile_agent.ImplicitQuantileAgent):
+    """Sample MyBubbleIQNAgent agent based on IQN"""
 
-def create_bubble_agent(sess, environment, summary_writer=None):
-    # NOTE - bubble has 6 descrete actions. see RetroPreprocessing()
-    # return MyBubbleDQNAgent(sess, num_actions=6, summary_writer=summary_writer)
+    def __init__(self, sess, num_actions, summary_writer=None):
+        print('! MyBubbleIQNAgent(%s)' % (num_actions))
+        self.rewards = []
+        super(MyBubbleIQNAgent, self).__init__(sess, num_actions, summary_writer=summary_writer)
+
+    def step(self, reward, observation):
+        self.rewards.append(reward)
+        return super(MyBubbleIQNAgent, self).step(reward, observation)
+
+    def reload_checkpoint(self, checkpoint_path, use_legacy_checkpoint=False):
+        print('IQN> reload_checkpoint()')
+        if checkpoint_path is None:
+            return
+        return super(MyBubbleIQNAgent, self).reload_checkpoint(checkpoint_path, use_legacy_checkpoint)
+
+    def begin_episode(self, observation):
+        print('IQN> begin_episode()')
+        return super(MyBubbleIQNAgent, self).begin_episode(observation)
+
+    def end_episode(self, reward):
+        print('IQN> end_episode(%s)'%reward)
+        return super(MyBubbleIQNAgent, self).end_episode(reward)
+
+    def get_probabilities(self):
+        # return self._sess.run(tf.squeeze(self._net_outputs.probabilities), {self.state_ph: self.state})
+        return np.asarray([[1,2]], dtype = np.int)
+
+    def get_rewards(self):
+        return [np.cumsum(self.rewards)]
+
+
+def create_bubble_dqn_agent(sess, environment, summary_writer=None):
     return MyBubbleDQNAgent(sess, num_actions=environment.action_space.n, summary_writer=summary_writer)
+
+def create_bubble_iqn_agent(sess, environment, summary_writer=None):
+    return MyBubbleIQNAgent(sess, num_actions=environment.action_space.n, summary_writer=summary_writer)
 
 
 def create_runner(base_dir, trained_agent_ckpt_path, agent='dqn', use_legacy_checkpoint=False):
     from dopamine.utils.example_viz_lib import create_dqn_agent, create_rainbow_agent, MyRunner
     from . import bubble_runner
-    create_agent = create_dqn_agent if agent == 'dqn' else create_rainbow_agent
-    create_agent = create_bubble_agent if agent == 'bubble' else create_rainbow_agent
-    # return MyRunner(base_dir, trained_agent_ckpt_path, create_agent, use_legacy_checkpoint)
-    return bubble_runner.BubbleRunner(base_dir, trained_agent_ckpt_path, create_agent, use_legacy_checkpoint)
+    create_agent = create_rainbow_agent if agent == 'rainbow' else create_dqn_agent
+    create_agent = create_bubble_dqn_agent if agent == 'dqn' else create_agent
+    create_agent = create_bubble_iqn_agent if agent == 'iqn' else create_agent
+    create_agent = create_bubble_iqn_agent if agent == 'bubble' else create_agent
+    return MyRunner(base_dir, trained_agent_ckpt_path, create_agent, use_legacy_checkpoint)
+    # return bubble_runner.BubbleRunner(base_dir, create_agent)
 
 
 def run(agent, game, level, num_steps, root_dir, restore_ckpt, use_legacy_checkpoint):
     print('run....')
     level = int(level) if level else 1
     config = """
+    import bubble.retro_lib
+    import bubble.bubble_agent
+
     retro_lib.create_retro_environment.game_name = '{}'
     retro_lib.create_retro_environment.level = {}
     Runner.create_environment_fn = @retro_lib.create_retro_environment
@@ -97,13 +139,12 @@ def run(agent, game, level, num_steps, root_dir, restore_ckpt, use_legacy_checkp
     DQNAgent.tf_device = '/cpu:*'
     WrappedReplayBuffer.replay_capacity = 300
   """.format(game, level)
-    base_dir = os.path.join(root_dir, 'agent_viz', game, agent)
+    base_dir = os.path.join(root_dir, '{}_viz'.format(agent), game, agent)
     gin.parse_config(config)
+    print('! base_dir = {}'.format(base_dir))
 
     # 1. create runner.
-    runner = create_runner(base_dir, restore_ckpt,
-                           agent, use_legacy_checkpoint)
+    runner = create_runner(base_dir, restore_ckpt, agent, use_legacy_checkpoint)
 
-    # 2. visualize
-    runner.visualize(os.path.join(base_dir, 'images'),
-                     num_global_steps=num_steps)
+    # 2. exec visualize().
+    runner.visualize(os.path.join(base_dir, 'images'), num_global_steps=num_steps)
