@@ -73,7 +73,7 @@ class RetroPreprocessing(object):
         self.game_level = game_level                    # current level of game. changeable by reset()
         self.reset_fire = reset_fire                    # flag to reset fire-press on last action trigger.
 
-        print('! RetroPreprocessing: wall_offset={}, step_penalty={}, game_level={}'.format(self.wall_offset, self.step_penalty, self.game_level))
+        print('! RetroPreprocessing: wall_offset={}, step_penalty={}, game_level={}, reset_fire={}'.format(self.wall_offset, self.step_penalty, self.game_level, self.reset_fire))
 
         obs_dims = self.environment.observation_space
         # Stores temporary observations used for pooling over two successive
