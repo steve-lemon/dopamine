@@ -48,7 +48,7 @@ class RetroPreprocessing(object):
         RetroPreprocessing._env = (env if env else None)
         return env
 
-    def __init__(self, environment, frame_skip=4, terminal_on_life_loss=True, screen_size=84, wall_offset=200, step_penalty=-0.001, game_level=0, reset_fire=0):
+    def __init__(self, environment, frame_skip=4, terminal_on_life_loss=True, screen_size=84, wall_offset=200, step_penalty=-0.001, game_level=0, reset_fire=0, score_bonus=0):
         """Constructor for an Atari 2600 preprocessor.
 
         Args:
@@ -56,6 +56,7 @@ class RetroPreprocessing(object):
            step_penalty: base penalty per each step.
            game_level: initial game-level on reset()
            reset_fire: index starts from 1 in order to reset fire press
+           score_bonus: bonus reward if got +score.
         """
         if frame_skip <= 0:
             raise ValueError(
@@ -72,8 +73,9 @@ class RetroPreprocessing(object):
         self.step_penalty = step_penalty if 1 else 0
         self.game_level = game_level                    # current level of game. changeable by reset()
         self.reset_fire = reset_fire                    # flag to reset fire-press on last action trigger.
+        self.score_bonus = score_bonus                  # bonus reward on score
 
-        print('! RetroPreprocessing: wall_offset={}, step_penalty={}, game_level={}, reset_fire={}'.format(self.wall_offset, self.step_penalty, self.game_level, self.reset_fire))
+        print('! RetroPreprocessing: wall_offset={}, step_penalty={}, game_level={}, reset_fire={}, score_bonus={}'.format(self.wall_offset, self.step_penalty, self.game_level, self.reset_fire, self.score_bonus))
 
         obs_dims = self.environment.observation_space
         # Stores temporary observations used for pooling over two successive
@@ -266,7 +268,7 @@ class RetroPreprocessing(object):
             acc_rew += -5 * (self.last_lives - curr_lives)      # max 3x lives
         # get enhancement in log scale.
         if curr_score > (self.last_score + 1):
-            acc_rew += math.log(curr_score - self.last_score, 100)  # score 1 -> 0.0 (so, no penalty)
+            acc_rew += math.log(curr_score - self.last_score, 100) + self.score_bonus # score 1 -> 0.0 (so, no penalty)
         # successful end of level stage.
         #if self.last_level > curr_level:
         #   acc_rew += 5 * (self.last_level - curr_level)       #

@@ -172,6 +172,11 @@ class MyLinePlotter(line_plotter.LinePlotter):
             }
     myDef.update(parameter_dict)
     super(MyLinePlotter, self).__init__(parameter_dict = myDef)
+    #! use 2nd axes for score
+    self.ax1 = self.plot.axes
+    self.ax2 = self.ax1.twinx() if 1>0 else None
+    self.ax2.set_ylabel('Score', color='b') if self.ax2 else None
+
   def draw(self):
     import pygame
     """Draw the line plot.
@@ -186,12 +191,8 @@ class MyLinePlotter(line_plotter.LinePlotter):
     num_colors = len(self.parameters['colors'])
     max_xlim = 0
     line_data = self.parameters['get_line_data_fn']()
-    #! use 2nd axes for score
-    ax1 = self.plot.axes
-    ax2 = ax1.twinx() if len(line_data) >= 2 else None
-    ax2.set_ylabel('Score', color='b') if ax2 else None
     for i in range(len(line_data)):
-      plot_axes = ax2 if ax2 and i + 1 >= len(line_data) else ax1
+      plot_axes = self.ax2 if self.ax2 and i + 1 >= len(line_data) else self.ax1
       plot_axes.plot(line_data[i],
                      linewidth=self.parameters['linewidth'],
                      color=self.parameters['colors'][i % num_colors])
