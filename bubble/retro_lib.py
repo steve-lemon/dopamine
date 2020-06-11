@@ -48,13 +48,14 @@ class RetroPreprocessing(object):
         RetroPreprocessing._env = (env if env else None)
         return env
 
-    def __init__(self, environment, frame_skip=4, terminal_on_life_loss=True, screen_size=84, wall_offset=200, step_penalty=-0.001, game_level=0):
+    def __init__(self, environment, frame_skip=4, terminal_on_life_loss=True, screen_size=84, wall_offset=200, step_penalty=-0.001, game_level=0, reset_fire=0):
         """Constructor for an Atari 2600 preprocessor.
 
         Args:
            wall_offset: offset of wall position (0 means no wall-clearance)
            step_penalty: base penalty per each step.
            game_level: initial game-level on reset()
+           reset_fire: index starts from 1 in order to reset fire press
         """
         if frame_skip <= 0:
             raise ValueError(
@@ -70,6 +71,7 @@ class RetroPreprocessing(object):
         self.wall_offset = wall_offset                  # NOTE - X offset of WALL.
         self.step_penalty = step_penalty if 1 else 0
         self.game_level = game_level                    # current level of game. changeable by reset()
+        self.reset_fire = reset_fire                    # flag to reset fire-press on last action trigger.
 
         print('! RetroPreprocessing: wall_offset={}, step_penalty={}, game_level={}'.format(self.wall_offset, self.step_penalty, self.game_level))
 
@@ -174,9 +176,9 @@ class RetroPreprocessing(object):
         for time_step in range(self.frame_skip):
             # We bypass the Gym observation altogether and directly fetch the
             # grayscale image from the ALE. This is a little faster.
-            # TODO(steve) - if holding to press fire-button, it would not fire actually. so clear fire on last frame-skip @200610
-            if self.frame_skip > 2 and time_step + 2 >= self.frame_skip:
-                action[0] = 0           # clear fire key.
+            # NOTE(steve) - if holding to press fire-button, it would not fire actually. so clear fire on last frame-skip @200610
+            if self.reset_fire > 0 and self.frame_skip > 2 and time_step + 2 >= self.frame_skip:
+                action[self.reset_fire - 1] = 0           # clear fire press state.
             #! run step to origin game-env.
             obs, reward, game_over, info = self.environment.step(action)
 
