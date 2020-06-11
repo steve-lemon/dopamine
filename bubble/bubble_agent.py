@@ -168,7 +168,7 @@ class MyLinePlotter(line_plotter.LinePlotter):
                'family': 'DejaVu Sans',
                'weight': 'regular',
                'size': 26 },
-             'figsize': (11,9),
+             'figsize': (12, 9),
             }
     myDef.update(parameter_dict)
     super(MyLinePlotter, self).__init__(parameter_dict = myDef)
