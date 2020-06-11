@@ -246,6 +246,7 @@ def run(agent, game, level, num_steps, root_dir, restore_ckpt, use_legacy_checkp
     retro_lib.create_retro_environment.game_name = '{}'
     retro_lib.create_retro_environment.level = {}
     Runner.create_environment_fn = @retro_lib.create_retro_environment
+    RetroPreprocessing.wall_offset = 200
     DQNAgent.epsilon_eval = 0.1
     DQNAgent.tf_device = '/cpu:*'
     WrappedReplayBuffer.replay_capacity = 300
