@@ -59,8 +59,13 @@ class MyBubbleDQNAgent(MyDQNAgent):
 
     def __init__(self, sess, num_actions, summary_writer=None):
         print('! MyBubbleDQNAgent(%s)' % (num_actions))
-        super(MyBubbleDQNAgent, self).__init__(
-            sess, num_actions, summary_writer=summary_writer)
+        self.scores = []
+        super(MyBubbleDQNAgent, self).__init__(sess, num_actions, summary_writer=summary_writer)
+
+    def step(self, reward, observation, info = None):
+        #print('> info={}'.format(info))
+        self.scores.append(int(info['score']) if info and 'score' in info else 0)
+        return super(MyBubbleDQNAgent, self).step(reward, observation)
 
     def reload_checkpoint(self, checkpoint_path, use_legacy_checkpoint=False):
         print('DQN> reload_checkpoint()')
@@ -76,16 +81,23 @@ class MyBubbleDQNAgent(MyDQNAgent):
         print('DQN> end_episode(%s)'%reward)
         return super(MyBubbleDQNAgent, self).end_episode(reward)
 
+    def get_rewards(self):
+        ret = super(MyBubbleDQNAgent, self).get_rewards()
+        ret.append(self.scores)
+        return ret
+
 class MyBubbleIQNAgent(implicit_quantile_agent.ImplicitQuantileAgent):
     """Sample MyBubbleIQNAgent agent based on IQN"""
 
     def __init__(self, sess, num_actions, summary_writer=None):
         print('! MyBubbleIQNAgent(%s)' % (num_actions))
         self.rewards = []
+        self.scores = []
         super(MyBubbleIQNAgent, self).__init__(sess, num_actions, summary_writer=summary_writer)
 
-    def step(self, reward, observation):
+    def step(self, reward, observation, info = None):
         self.rewards.append(reward)
+        self.scores.append(int(info['score']) if info and 'score' in info else 0)
         return super(MyBubbleIQNAgent, self).step(reward, observation)
 
     def reload_checkpoint(self, checkpoint_path, use_legacy_checkpoint=False):
@@ -107,11 +119,11 @@ class MyBubbleIQNAgent(implicit_quantile_agent.ImplicitQuantileAgent):
         return np.asarray([[1,2]], dtype = np.int)
 
     def get_rewards(self):
-        return [np.cumsum(self.rewards)]
+        return [np.cumsum(self.rewards), self.scores]
 
 class MyObservationPlotter(plotter.Plotter):
-    _defaults = { 'x': 0, 'y': 0 }
     """MyObservationPlotter: plot observation via step()"""
+    _defaults = { 'x': 0, 'y': 0 }
     def __init__(self, parameter_dict = {}, screen_size = 84):
         super(MyObservationPlotter, self).__init__(parameter_dict)
         self.width = self.parameters['width'] if 'width' in self.parameters else screen_size
@@ -132,11 +144,102 @@ class MyObservationPlotter(plotter.Plotter):
             np.copyto(numpy_surface, obs.ravel())
         return pygame.transform.scale(self.game_surface, (self.width, self.height))
 
+
+class MyLinePlotter(line_plotter.LinePlotter):
+  """MyLinePlotter: plot observation via step()"""
+  def __init__(self, parameter_dict):
+    myDef = {'font': {
+               'family': 'DejaVu Sans',
+               'weight': 'regular',
+               'size': 26 },
+             'figsize': (11,9),
+            }
+    myDef.update(parameter_dict)
+    super(MyLinePlotter, self).__init__(parameter_dict = myDef)
+  def draw(self):
+    import pygame
+    """Draw the line plot.
+
+    If `parameter_dict` contains a 'legend' key pointing to a list of labels,
+    this will be used as the legend labels in the plot.
+
+    Returns:
+      object to be rendered by AgentVisualizer.
+    """
+    self._setup_plot()   # draw 
+    num_colors = len(self.parameters['colors'])
+    max_xlim = 0
+    line_data = self.parameters['get_line_data_fn']()
+    #! use 2nd axes for score
+    ax1 = self.plot.axes
+    ax2 = ax1.twinx() if len(line_data) >= 2 else None
+    ax2.set_ylabel('Score', color='b') if ax2 else None
+    for i in range(len(line_data)):
+      plot_axes = ax2 if ax2 and i + 1 >= len(line_data) else ax1
+      plot_axes.plot(line_data[i],
+                     linewidth=self.parameters['linewidth'],
+                     color=self.parameters['colors'][i % num_colors])
+      max_xlim = max(max_xlim, len(line_data[i]))
+    min_xlim = max(0, max_xlim - self.parameters['max_width'])
+    self.plot.set_xlim(min_xlim, max_xlim)
+    if 'legend' in self.parameters:
+      self.plot.legend(self.parameters['legend'])
+    self.fig.canvas.draw()
+    # Now transfer to surface.
+    width, height = self.fig.canvas.get_width_height()
+    if self.plot_surface is None:
+      self.plot_surface = pygame.Surface((width, height))
+    plot_buffer = np.frombuffer(self.fig.canvas.buffer_rgba(), np.uint32)
+    surf_buffer = np.frombuffer(self.plot_surface.get_buffer(),
+                                dtype=np.int32)
+    np.copyto(surf_buffer, plot_buffer)
+    return pygame.transform.smoothscale(
+        self.plot_surface,
+        (self.parameters['width'], self.parameters['height']))
+
+class MyBarPlotter(bar_plotter.BarPlotter):
+  """MyBarPlotter: plot observation via step()"""
+  def __init__(self, parameter_dict):
+    myDef = {'font': {
+               'family': 'DejaVu Sans',
+               'weight': 'regular',
+               'size': 26 },
+            }
+    myDef.update(parameter_dict)
+    super(MyBarPlotter, self).__init__(parameter_dict = myDef)
+  def draw(self):
+      return super(MyBarPlotter, self).draw()
+
 class MyBubbleRunner(MyRunner):
     """Custom MyRunner agent based on IQN"""
     def __init__(self, base_dir, trained_agent_ckpt_path, create_agent_fn, use_legacy_checkpoint = False):
         print('! MyBubbleRunner({})'.format(base_dir))
         super(MyBubbleRunner, self).__init__(base_dir, trained_agent_ckpt_path, create_agent_fn, use_legacy_checkpoint)
+
+    def _run_one_step(self, action):
+        observation, reward, is_terminal, info = self._environment.step(action)
+        return observation, reward, is_terminal, info
+
+    def _run_one_episode(self):
+        step_number = 0
+        total_reward = 0.
+        action = self._initialize_episode()
+        is_terminal = False
+        # Keep interacting until we reach a terminal state.
+        while True:
+            observation, reward, is_terminal, info = self._run_one_step(action)
+            total_reward += reward
+            step_number += 1
+            reward = np.clip(reward, -1, 1)
+            if (self._environment.game_over or step_number == self._max_steps_per_episode):
+                break
+            elif is_terminal:
+                self._agent.end_episode(reward)
+                action = self._agent.begin_episode(observation)
+            else:
+                action = self._agent.step(reward, observation, info)
+        self._end_episode(reward)
+        return step_number, total_reward
 
     def visualize(self, record_path, num_global_steps=500):
         '''customize viz for bubble
@@ -159,7 +262,8 @@ class MyBubbleRunner(MyRunner):
                          'ylabel': 'Reward',
                          'title': 'Rewards',
                          'get_line_data_fn': self._agent.get_rewards}
-        reward_plot = line_plotter.LinePlotter(parameter_dict=reward_params)
+        #reward_plot = line_plotter.LinePlotter(parameter_dict=reward_params)
+        reward_plot = MyLinePlotter(parameter_dict=reward_params)
         action_names = ['Action {}'.format(x) for x in range(self._agent.num_actions)]
         # Plot Observation at left-bottom
         obsrv_params = {
@@ -178,13 +282,13 @@ class MyBubbleRunner(MyRunner):
             q_params['ylabel'] = 'Q-Value'
             q_params['title'] = 'Q-Values'
             q_params['get_line_data_fn'] = self._agent.get_q_values
-            q_plot = line_plotter.LinePlotter(parameter_dict = q_params)
+            q_plot = MyLinePlotter(parameter_dict = q_params)
         else:
             q_params['xlabel'] = 'Return'
             q_params['ylabel'] = 'Return probability'
             q_params['title'] = 'Return distribution'
             q_params['get_bar_data_fn'] = self._agent.get_probabilities
-            q_plot = bar_plotter.BarPlotter(parameter_dict=q_params)
+            q_plot = MyBarPlotter(parameter_dict = q_params)
         # Screen Size
         screen_width = (atari_plot.parameters['width'] + reward_plot.parameters['width'])
         screen_height = (atari_plot.parameters['height'] + q_plot.parameters['height'])
@@ -203,7 +307,7 @@ class MyBubbleRunner(MyRunner):
             initial_observation = self._environment.reset()
             action = self._agent.begin_episode(initial_observation)
             while True:
-                observation, reward, is_terminal, _ = self._environment.step(action)
+                observation, reward, is_terminal, info = self._environment.step(action)
                 global_step += 1
                 obsrv_plot.setObservation(observation)
                 visualizer.visualize()
@@ -213,7 +317,7 @@ class MyBubbleRunner(MyRunner):
                     self._agent.end_episode(reward)
                     action = self._agent.begin_episode(observation)
                 else:
-                    action = self._agent.step(reward, observation)
+                    action = self._agent.step(reward, observation, info)
             self._end_episode(reward)
         visualizer.generate_video()
 
