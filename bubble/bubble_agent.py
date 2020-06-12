@@ -132,7 +132,7 @@ class MyBubbleIQNAgent(implicit_quantile_agent.ImplicitQuantileAgent):
 
     def get_probabilities(self):
         # return self._sess.run(tf.squeeze(self._net_outputs.probabilities), {self.state_ph: self.state})
-        return np.asarray([[1,2]], dtype = np.int)
+        return self._sess.run(tf.squeeze(self._net_outputs.quantile_values), {self.state_ph: self.state})
 
     def get_rewards(self):
         return [np.cumsum(self.rewards), self.scores]
