@@ -1,0 +1,15 @@
+# testing gin file in dynamic loading
+
+import bubble.retro_lib
+import bubble.bubble_agent
+
+bubble_agent.run.hello = 'Hi Bubble'
+
+# expected results!!
+# $ python -m bubble.main --agent=hello --gin_files=bubble/hello-bubble.gin
+# > pygame 1.9.6
+# > Hello from the pygame community. https://www.pygame.org/contribute.html
+# > ! load gin-files:['bubble/hello-bubble.gin']
+# > run(Hi Bubble)....
+# > ! base_dir = /tmp/bubble/hello_viz/BubbleBobble
+# > Hi Bubble BubbleBobble!!!!

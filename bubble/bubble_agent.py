@@ -135,24 +135,33 @@ def create_runner(base_dir, trained_agent_ckpt_path, agent='dqn', use_legacy_che
                                         use_legacy_checkpoint = use_legacy_checkpoint)
 
 
-def run(agent, game, level, num_steps, root_dir, restore_ckpt, use_legacy_checkpoint):
-    print('run....')
+@gin.configurable
+def run(agent, game, level, num_steps, root_dir, restore_ckpt, use_legacy_checkpoint, config=None, hello = 'Hello'):
+    print('run(%s)....'%(hello))
     level = int(level) if level else 1
-    config = """
-    import bubble.retro_lib
-    import bubble.bubble_agent
+    # sample config if config = None.
+    if config is None:
+        config = """
+        import bubble.retro_lib
+        import bubble.bubble_agent
 
-    retro_lib.create_retro_environment.game_name = '{}'
-    retro_lib.create_retro_environment.level = {}
-    Runner.create_environment_fn = @retro_lib.create_retro_environment
-    RetroPreprocessing.wall_offset = 200
-    DQNAgent.epsilon_eval = 0.1
-    DQNAgent.tf_device = '/cpu:*'
-    WrappedReplayBuffer.replay_capacity = 300
-  """.format(game, level)
+        retro_lib.create_retro_environment.game_name = '{}'
+        retro_lib.create_retro_environment.level = {}
+        Runner.create_environment_fn = @retro_lib.create_retro_environment
+        RetroPreprocessing.wall_offset = 200
+        DQNAgent.epsilon_eval = 0.1
+        DQNAgent.tf_device = '/cpu:*'
+        WrappedReplayBuffer.replay_capacity = 300
+    """.format(game, level)
+        gin.parse_config(config)
+    # calc base directory.
     base_dir = os.path.join(root_dir, '{}_viz'.format(agent), game)
-    gin.parse_config(config)
     print('! base_dir = {}'.format(base_dir))
+
+    # python -m bubble.main --agent=hello
+    if agent == 'hello':
+        print('%s %s!!!!' % (hello,  game))
+        exit(-1)
 
     # 1. create runner.
     runner = create_runner(base_dir, restore_ckpt, agent, use_legacy_checkpoint)
