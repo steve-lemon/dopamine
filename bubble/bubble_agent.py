@@ -167,4 +167,4 @@ def run(agent, game, level, num_steps, root_dir, restore_ckpt, use_legacy_checkp
     runner = create_runner(base_dir, restore_ckpt, agent, use_legacy_checkpoint)
 
     # 2. exec visualize().
-    runner.visualize(os.path.join(base_dir, 'images'), num_global_steps=num_steps)
+    runner.visualize(os.path.join(base_dir, 'images-{}'.format(level)), num_global_steps=num_steps)
