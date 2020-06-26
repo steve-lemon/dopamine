@@ -63,6 +63,8 @@ def main(_, hello='Hello'):
     if FLAGS.gin_files:
         from dopamine.discrete_domains import run_experiment
         print('! load gin-files:{}'.format(FLAGS.gin_files))
+        FLAGS.gin_bindings.append('retro_lib.create_retro_environment.level = {}'.format(FLAGS.level))
+        print('! gin-bindings={}'.format(FLAGS.gin_bindings))
         run_experiment.load_gin_configs(FLAGS.gin_files, FLAGS.gin_bindings)
         run_config = ''         # do NOT load the default config in `bubble_agent.run`
 
