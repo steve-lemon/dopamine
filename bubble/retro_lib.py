@@ -219,7 +219,7 @@ class RetroPreprocessing(object):
         self.last_lives = curr_lives
         self.last_enems = curr_enems
         self.game_over = game_over
-        return observation, accumulated_reward + self.step_penalty, is_terminal, info
+        return observation, accumulated_reward, is_terminal, info
 
     def _fetch_grayscale_observation(self, obs, output):
         # clear walls
@@ -256,23 +256,17 @@ class RetroPreprocessing(object):
         [objective]
         - survive as long as possible
         - achieve as mush as score
-        - complete level as quick as possible.
         """
-        acc_rew = 0
-        # kill an enemy
-        # with double reward along with score (1 kill -> 100 score)
+        # init with base penalty per each step
+        acc_rew = self.step_penalty
+        # kill an enemy - with double reward along with score (1 kill -> 100 score)
         if self.last_enems > curr_enems:
             acc_rew += 1 * (self.last_enems - curr_enems)
-        # lost a life
+        # case of life lost
         if self.last_lives > curr_lives:
             acc_rew += -5 * (self.last_lives - curr_lives)      # max 3x lives
         # get enhancement in log scale.
         if curr_score > (self.last_score + 1):
-            acc_rew += math.log(curr_score - self.last_score, 100) + self.score_bonus # score 1 -> 0.0 (so, no penalty)
-        # successful end of level stage.
-        #if self.last_level > curr_level:
-        #   acc_rew += 5 * (self.last_level - curr_level)       #
-        # trim decimal
-        # acc_rew = int(acc_rew * 1024) / 1024
+            acc_rew += math.log(curr_score - self.last_score, 100) + self.score_bonus
         # return with total.
         return acc_rew
